@@ -1,15 +1,42 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Container, Form, SubmitButton, List, DeleteButton } from './styles';
 import { FaGithub, FaPlus, FaSpinner, FaBars, FaTrash } from 'react-icons/fa';
 
 import { api } from '../../services/api';
+import { Link } from 'react-router-dom';
 
 export const Main = () => {
 	const [newRepo, setNewRepo] = useState('');
 	const [repositories, setRepositories] = useState([]);
-	const [loanding, setLoanding] = useState(false);
+	const [loading, setLoading] = useState(false);
+	const [alert, setAlert] = useState(null);
+
+	useEffect(() => {
+		saveLocalStorage();
+	}, [repositories]);
+
+	useEffect(() => {
+		getLocalStorage();
+	}, []);
+
+	const saveLocalStorage = () => {
+		if (repositories.length !== 0) {
+			localStorage.setItem('repos', JSON.stringify(repositories));
+		}
+	};
+
+	const getLocalStorage = () => {
+		if (localStorage.getItem('repos') === null) {
+			localStorage.setItem('repos', JSON.stringify([]));
+		} else {
+			let repoLocal = JSON.parse(localStorage.getItem('repos'));
+			setRepositories(repoLocal);
+		}
+	};
+
 	function handleInputChange(e) {
 		setNewRepo(e.target.value);
+		setAlert(null);
 	}
 
 	const hanldeSubmit = useCallback(
@@ -17,9 +44,19 @@ export const Main = () => {
 			e.preventDefault();
 
 			async function submit() {
-				setLoanding(true);
+				setLoading(true);
+				setAlert(null);
 				try {
+					if (newRepo === '') {
+						throw new Error('Digit the Repository name. Exp: facebook/react');
+					}
+
 					const response = await api.get(`repos/${newRepo}`);
+
+					const hasRepo = repositories.find((repo) => repo.name === newRepo);
+					if (hasRepo) {
+						throw new Error('Repository added already!');
+					}
 					const data = {
 						name: response.data.full_name,
 					};
@@ -27,9 +64,10 @@ export const Main = () => {
 					setRepositories([...repositories, data]);
 					setNewRepo('');
 				} catch (err) {
+					setAlert(true);
 					console.log(err);
 				} finally {
-					setLoanding(false);
+					setLoading(false);
 				}
 			}
 
@@ -50,10 +88,13 @@ export const Main = () => {
 		<Container>
 			<h1>
 				<FaGithub size={25} />
-				Main
+				My Repositories
 			</h1>
 
-			<Form onSubmit={hanldeSubmit}>
+			<Form
+				onSubmit={hanldeSubmit}
+				error={alert}
+			>
 				<input
 					type='text'
 					placeholder='Add Repository'
@@ -61,8 +102,8 @@ export const Main = () => {
 					onChange={handleInputChange}
 				/>
 
-				<SubmitButton loanding={loanding ? 1 : 0}>
-					{loanding ? (
+				<SubmitButton loanding={loading ? 1 : 0}>
+					{loading ? (
 						<FaSpinner
 							color='#fff'
 							size={14}
@@ -85,9 +126,9 @@ export const Main = () => {
 							</DeleteButton>
 							{repo.name}
 						</span>
-						<a href=''>
+						<Link to={`/repository/${encodeURIComponent(repo.name)}`}>
 							<FaBars size={20} />
-						</a>
+						</Link>
 					</li>
 				))}
 			</List>
