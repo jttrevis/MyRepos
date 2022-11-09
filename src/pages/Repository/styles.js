@@ -125,3 +125,23 @@ export const PageActions = styled.div`
 		}
 	}
 `;
+
+export const ButtonState = styled.div`
+	display: flex;
+	align-items: center;
+
+	gap: 15px;
+	margin-top: 10px;
+
+	button {
+		outline: 0;
+		border: 0;
+		padding: 5px 10px;
+		border-radius: 4px;
+
+		&:nth-child(${(props) => props.active + 1}) {
+			background: #0071db;
+			color: #fff;
+		}
+	}
+`;

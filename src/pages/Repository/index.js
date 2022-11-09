@@ -9,6 +9,7 @@ import {
 	BackButton,
 	IssuesList,
 	PageActions,
+	ButtonState,
 } from './styles';
 
 export const Repository = ({ match }) => {
@@ -18,25 +19,38 @@ export const Repository = ({ match }) => {
 	const [issues, setIssues] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [page, setPage] = useState(1);
+
+	const [filters, setFilters] = useState([
+		{ state: 'all', label: 'All', active: true },
+		{ state: 'open', label: 'Open', active: false },
+		{ state: 'closed', label: 'Closed', active: false },
+	]);
+
+	const [filterIndex, setFilterIndex] = useState(0);
 	useEffect(() => {
 		async function load() {
 			const [repoData, issuesData] = await Promise.all([
 				api.get(`/repos/${repository}`),
 				api.get(`/repos/${repository}/issues`, {
 					params: {
-						state: 'open',
-						per_page: 5,
+						state: filters.find((f) => f.active).state,
+						per_page: 15,
 					},
 				}),
 			]);
 
 			setRepo(repoData.data);
 			setIssues(issuesData.data);
+
 			setLoading(false);
 		}
 
 		load();
-	}, [repository]);
+	}, [repository, filters]);
+
+	function handleFilter(index) {
+		setFilterIndex(index);
+	}
 
 	function handlePage(action) {
 		setPage(action === 'prev' ? page - 1 : page + 1);
@@ -46,15 +60,15 @@ export const Repository = ({ match }) => {
 		async function loadIssue() {
 			const response = await api.get(`/repos/${repository}/issues`, {
 				params: {
-					state: 'open',
+					state: filters[filterIndex].state,
 					page,
-					per_page: 5,
+					per_page: 15,
 				},
 			});
 			setIssues(response.data);
 		}
 		loadIssue();
-	}, [page, repository]);
+	}, [page, repository, filterIndex, filters]);
 
 	if (loading) {
 		return (
@@ -74,11 +88,24 @@ export const Repository = ({ match }) => {
 			<Owner>
 				<img
 					src={repo.owner.avatar_url}
-					alt=''
+					alt={repo.owner.name}
 				/>
 				<h1>{repo.name}</h1>
 				<p>{repo.description} </p>
 			</Owner>
+
+			<ButtonState active={filterIndex}>
+				{filters.map((filter, index) => (
+					<button
+						type='button'
+						key={filter.label}
+						onClick={() => handleFilter(index)}
+					>
+						{filter.label}
+					</button>
+				))}
+			</ButtonState>
+
 			<IssuesList>
 				{issues.map((issue) => (
 					<li key={String(issue.id)}>
